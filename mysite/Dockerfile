@@ -21,8 +21,11 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy the rest of the project
 COPY . /mysite/
 
+# Collect static files at build time
+RUN python manage.py collectstatic --noinput
+
 # Expose the port Daphne will run on
 EXPOSE 8000
 
-# Use Daphne as the entry point
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "mysite.asgi:application"]
+# Use Daphne — $PORT is injected by Koyeb at runtime
+CMD daphne -b 0.0.0.0 -p ${PORT:-8000} mysite.asgi:application
