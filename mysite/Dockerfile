@@ -27,5 +27,5 @@ RUN python manage.py collectstatic --noinput
 # Expose the port Daphne will run on
 EXPOSE 8000
 
-# Use Daphne — $PORT is injected by Koyeb at runtime
-CMD daphne -b 0.0.0.0 -p ${PORT:-8000} mysite.asgi:application
+# Run migrations at startup, then start Daphne
+CMD python manage.py migrate --noinput && daphne -b 0.0.0.0 -p ${PORT:-8000} mysite.asgi:application
