@@ -15,11 +15,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY requirements.txt ./
+COPY mysite/requirements.txt ./
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Copy the rest of the project
-COPY . /mysite/
+COPY mysite/ /mysite/
 
 # Collect static files at build time
 RUN python manage.py collectstatic --noinput
