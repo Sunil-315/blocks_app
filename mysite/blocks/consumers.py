@@ -51,19 +51,32 @@ class BlockConsumer(AsyncWebsocketConsumer):
         )
 
     async def disconnect(self, close_code):
-        # Leave the game room
-        await self.channel_layer.group_discard(
-            self.ROOM_GROUP,
-            self.channel_name
-        )
+        # Free all blocks owned by this user
+        freed_coords = await self.free_user_blocks()
         
-        # Notify others about disconnection
+        # Broadcast freed blocks + user_left BEFORE leaving the group
+        if freed_coords:
+            await self.channel_layer.group_send(
+                self.ROOM_GROUP,
+                {
+                    "type": "blocks_freed",
+                    "user_id": self.user_id,
+                    "blocks": freed_coords
+                }
+            )
+        
         await self.channel_layer.group_send(
             self.ROOM_GROUP,
             {
                 "type": "user_left",
                 "user_id": self.user_id
             }
+        )
+        
+        # Leave the game room
+        await self.channel_layer.group_discard(
+            self.ROOM_GROUP,
+            self.channel_name
         )
 
     async def receive(self, text_data):
@@ -125,6 +138,14 @@ class BlockConsumer(AsyncWebsocketConsumer):
             "user_id": event["user_id"]
         }))
 
+    async def blocks_freed(self, event):
+        """Notify client about freed blocks."""
+        await self.send(text_data=json.dumps({
+            "type": "blocks_freed",
+            "user_id": event["user_id"],
+            "blocks": event["blocks"]
+        }))
+
     # === Database operations ===
     
     @database_sync_to_async
@@ -162,3 +183,11 @@ class BlockConsumer(AsyncWebsocketConsumer):
         else:
             # Block already claimed by someone else
             return False, None
+
+    @database_sync_to_async
+    def free_user_blocks(self):
+        """Clear all blocks owned by this user. Returns list of freed coords."""
+        blocks = Block.objects.filter(owner=self.user_id)
+        coords = [{"x": b.x, "y": b.y} for b in blocks]
+        blocks.update(owner=None, color="#374151", claimed_at=None)
+        return coords

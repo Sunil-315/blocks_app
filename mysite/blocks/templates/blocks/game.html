@@ -264,6 +264,13 @@
                             this.showToast('Block already claimed!', 'error');
                             break;
                             
+                        case 'blocks_freed':
+                            // Remove freed blocks from local state
+                            data.blocks.forEach(b => {
+                                delete this.blocks[`${b.x}-${b.y}`];
+                            });
+                            break;
+
                         case 'user_joined':
                             if (data.user_id !== this.myId) {
                                 this.showToast(`${data.user_id} joined the game`, 'success');
